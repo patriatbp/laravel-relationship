@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 
 use DB;
 use App\Post;
+use App\Tag;
 use Auth;
+
 
 class PostController extends Controller
 {
@@ -50,11 +52,48 @@ class PostController extends Controller
             'body'=>'required'
         ]);
 
-        Post::create([
-            'title'=>$request->title,
-            'body'=>$request->body,
-            'user_id'=>Auth::id()
+        //explode untuk mengubah request tags menjadi array
+        $tags_arr = explode(',', $request["tags"]);
+        
+        // looping ke array tags tadi
+        // setiap looping lakukan pengecekan apakah sudah ada tags
+        // kalo sudah ada ambil id nya
+        // kalo belum ada simpan tags, lalu ambil idnya
+        // buat array penampung
+
+        $tag_ids = [];
+        foreach($tags_arr as $tag_name){
+            $tag = Tag::firstOrCreate(["tag_name" => $tag_name]);
+
+            $tag_ids[] = $tag->id;
+            // if($tag){
+            //     $tag_ids[] = $tag->id;
+            // }else{
+            //     $row_tag = Tag::create(["tag_name" => $tag_name]);
+            //     $tag_ids[] = $row_tag->id;
+            // }
+        }
+    
+        $post = Post::create([
+            "title"=>$request["title"],
+            "body"=>$request["body"],           
+            "user_id" => Auth::id()
         ]);
+
+        $post->tags()->sync($tag_ids);
+
+        // $user = Auth::user();
+        // $user->posts()->associate($post);
+
+        // $user->save();
+
+        // $user = Auth::id();
+        // $user->post()->save($post);
+        // $post = $user->posts()->create([
+        //     "title"=>$request["title"],
+        //     "body"=>$request["body"]    
+        // ]);
+
 
         return redirect('/post');
     }
@@ -80,7 +119,12 @@ class PostController extends Controller
     public function edit($id)
     {
         $post = Post::find($id);
+        // $data_tag = [];
+        // foreach($post->tags as $tag){
+        // echo  $tag->tag_name." ";
+        // }
         
+        // dd($data_tag);
         return view('post.edit', compact('post'));
     }
 
@@ -98,10 +142,20 @@ class PostController extends Controller
             'body'=>'required'
         ]);
 
+        $tags_arr = explode(',', $request["tags"]);
+
+        $tag_ids = [];
+        foreach($tags_arr as $tag_name){
+            $tag = Tag::firstOrCreate(["tag_name" => $tag_name]);
+            $tag_ids[] = $tag->id;
+
+        }
+
         $post = Post::find($id);
         $post->title = $request->title;
         $post->body = $request->body;
         $post->update();
+        $post->tags()->sync($tag_ids);
 
         return redirect('/post');
     }
